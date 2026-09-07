@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>WICS Gate Pass Camera Scanner</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f3f6fa;
+      color: #15395f;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .page {
+      width: min(100%, 560px);
+      margin: 0 auto;
+      padding: 24px 16px 34px;
+    }
+
+    h1 {
+      margin: 8px 0 6px;
+      font-size: 26px;
+      text-align: center;
+    }
+
+    .subtitle {
+      margin-bottom: 18px;
+      text-align: center;
+      color: #61758a;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 10px 28px rgba(21,57,95,.10);
+    }
+
+    #reader {
+      width: 100%;
+      overflow: hidden;
+      border-radius: 14px;
+      background: #0f1720;
+    }
+
+    #status {
+      margin-top: 14px;
+      min-height: 52px;
+      padding: 13px 14px;
+      border-radius: 12px;
+      background: #eef4fa;
+      text-align: center;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    #status.success { background: #edf8f1; }
+    #status.error { background: #fff0f0; color: #8b1f1f; }
+
+    .button {
+      width: 100%;
+      min-height: 52px;
+      margin-top: 12px;
+      border: 0;
+      border-radius: 12px;
+      background: #15395f;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .button.secondary {
+      background: #e9eef4;
+      color: #15395f;
+    }
+
+    .small {
+      margin-top: 14px;
+      color: #74879a;
+      font-size: 12px;
+      line-height: 1.45;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>GATE PASS CAMERA</h1>
+    <div class="subtitle">Point the rear camera at the student's QR code or barcode.</div>
+
+    <section class="card">
+      <div id="reader"></div>
+      <div id="status">Starting camera…</div>
+
+      <button id="retryButton" class="button" type="button" hidden onclick="startScanner()">
+        START CAMERA
+      </button>
+
+      <button class="button secondary" type="button" onclick="closeScannerWindow()">
+        CANCEL / CLOSE
+      </button>
+
+      <div class="small">
+        This page does not access attendance sheets. It only reads the code and sends the decoded Student ID back to the open Gate Pass page.
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const statusBox = document.getElementById('status');
+    const retryButton = document.getElementById('retryButton');
+
+    let scanner = null;
+    let scanCompleted = false;
+
+    function setStatus(text, type) {
+      statusBox.textContent = text;
+      statusBox.className = type || '';
+    }
+
+    function closeScannerWindow() {
+      window.close();
+    }
+
+    async function startScanner() {
+      retryButton.hidden = true;
+      scanCompleted = false;
+      setStatus('Starting camera…', '');
+
+      if (typeof Html5Qrcode === 'undefined') {
+        setStatus('Scanner library could not load. Check the internet connection and reload this page.', 'error');
+        retryButton.hidden = false;
+        return;
+      }
+
+      try {
+        if (scanner) {
+          try { await scanner.stop(); } catch (e) {}
+          try { scanner.clear(); } catch (e) {}
+        }
+
+        scanner = new Html5Qrcode(
+          'reader',
+          {
+            formatsToSupport: [
+              Html5QrcodeSupportedFormats.QR_CODE,
+              Html5QrcodeSupportedFormats.CODE_128,
+              Html5QrcodeSupportedFormats.CODE_39,
+              Html5QrcodeSupportedFormats.CODE_93,
+              Html5QrcodeSupportedFormats.EAN_13,
+              Html5QrcodeSupportedFormats.EAN_8
+            ],
+            verbose: false
+          }
+        );
+
+        const config = {
+          fps: 12,
+          qrbox: function(viewfinderWidth, viewfinderHeight) {
+            const size = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.72);
+            return { width: size, height: size };
+          },
+          aspectRatio: 1.333333
+        };
+
+        await scanner.start(
+          { facingMode: 'environment' },
+          config,
+          onScanSuccess,
+          function() {}
+        );
+
+        setStatus('Camera ready — scan one student code.', '');
+      }
+      catch (error) {
+        setStatus(
+          'Camera could not start. Allow camera permission in the browser, then tap START CAMERA.',
+          'error'
+        );
+        retryButton.hidden = false;
+      }
+    }
+
+    async function onScanSuccess(decodedText) {
+      if (scanCompleted) return;
+
+      const studentId = String(decodedText || '').trim().toUpperCase();
+      if (!studentId) return;
+
+      scanCompleted = true;
+      setStatus('Code read: ' + studentId + ' — sending to Gate Pass…', 'success');
+
+      try {
+        if (scanner) await scanner.stop();
+      }
+      catch (error) {}
+
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage(
+          {
+            type: 'WICS_GATEPASS_CAMERA_SCAN',
+            studentId: studentId
+          },
+          '*'
+        );
+
+        setStatus('Sent to Gate Pass: ' + studentId, 'success');
+        setTimeout(function() { window.close(); }, 650);
+        return;
+      }
+
+      setStatus(
+        'The Student ID was read (' + studentId + '), but the Gate Pass page is no longer connected. Close this page and open the camera from Gate Pass again.',
+        'error'
+      );
+      retryButton.hidden = false;
+    }
+
+    window.addEventListener('load', startScanner);
+  </script>
+</body>
+</html>
