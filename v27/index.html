@@ -3,228 +3,198 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>WICS Gate Pass Camera Scanner</title>
-
+  <title>WICS Gate Pass V27</title>
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
   <style>
     * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body { overflow: hidden; background: #f3f6fa; font-family: Arial, Helvetica, sans-serif; color: #15395f; }
 
-    body {
-      margin: 0;
-      min-height: 100vh;
+    #gatePassFrame {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
       background: #f3f6fa;
-      color: #15395f;
-      font-family: Arial, Helvetica, sans-serif;
     }
 
-    .page {
-      width: min(100%, 620px);
-      margin: 0 auto;
-      padding: 20px 14px 32px;
+    .camera-float {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      width: 292px;
+      z-index: 50;
+      overflow: hidden;
+      border: 1px solid rgba(21,57,95,.18);
+      border-radius: 16px;
+      background: #ffffff;
+      box-shadow: 0 14px 38px rgba(21,57,95,.22);
+      user-select: none;
     }
 
-    h1 {
-      margin: 7px 0 5px;
-      font-size: 28px;
-      text-align: center;
-      letter-spacing: .5px;
+    .camera-head {
+      min-height: 42px;
+      padding: 8px 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: #15395f;
+      color: #ffffff;
+      cursor: move;
+      touch-action: none;
     }
 
-    .subtitle {
-      margin-bottom: 16px;
-      text-align: center;
-      color: #61758a;
-      font-size: 16px;
-      line-height: 1.45;
-    }
-
-    .session-pill {
-      width: max-content;
-      max-width: 100%;
-      margin: 0 auto 14px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: #e7f4ec;
-      color: #226b49;
+    .camera-title {
       font-size: 12px;
       font-weight: 900;
-      letter-spacing: .6px;
-      text-align: center;
+      letter-spacing: .8px;
     }
 
-    .card {
-      background: #fff;
-      border-radius: 19px;
-      padding: 15px;
-      box-shadow: 0 10px 28px rgba(21,57,95,.10);
+    .camera-pill {
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.15);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .5px;
+      white-space: nowrap;
     }
 
     #reader {
       width: 100%;
-      overflow: hidden;
-      border-radius: 15px;
+      min-height: 174px;
       background: #0f1720;
+      overflow: hidden;
     }
 
-    #status {
-      margin-top: 14px;
-      min-height: 68px;
-      padding: 14px;
-      border-radius: 13px;
-      background: #eef4fa;
-      text-align: center;
-      font-weight: 800;
-      font-size: 15px;
-      line-height: 1.4;
+    #reader video { object-fit: cover !important; }
+
+    #cameraStatus {
+      min-height: 48px;
+      padding: 9px 11px;
       display: flex;
       align-items: center;
       justify-content: center;
+      text-align: center;
+      background: #eef4fa;
+      color: #15395f;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.35;
     }
+    #cameraStatus.working { background: #fff6df; color: #7b5714; }
+    #cameraStatus.success { background: #eaf7ef; color: #226b49; }
+    #cameraStatus.error { background: #fff0f0; color: #8b1f1f; }
 
-    #status.working { background: #fff7e8; color: #805b16; }
-    #status.success { background: #edf8f1; color: #226b49; }
-    #status.error { background: #fff0f0; color: #8b1f1f; }
-
-    .button {
-      width: 100%;
-      min-height: 54px;
-      margin-top: 12px;
+    #retryCamera {
+      width: calc(100% - 18px);
+      min-height: 40px;
+      margin: 9px;
       border: 0;
-      border-radius: 12px;
+      border-radius: 10px;
       background: #15395f;
       color: #fff;
-      font-size: 16px;
       font-weight: 800;
       cursor: pointer;
     }
 
-    .button.secondary {
-      background: #e9eef4;
+    .setup-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      background: #f3f6fa;
+    }
+    .setup-card {
+      width: min(560px, 100%);
+      padding: 26px;
+      border-radius: 20px;
+      background: #fff;
+      box-shadow: 0 16px 42px rgba(21,57,95,.14);
+    }
+    .setup-card h1 { margin: 0 0 9px; font-size: 25px; }
+    .setup-card p { margin: 0 0 18px; color: #60768d; line-height: 1.5; }
+    .setup-card input {
+      width: 100%; min-height: 48px; padding: 11px 12px;
+      border: 2px solid #c5d2df; border-radius: 11px; font-size: 15px; outline: none;
+    }
+    .setup-card input:focus { border-color: #15395f; }
+    .setup-card button {
+      width: 100%; min-height: 48px; margin-top: 12px; border: 0; border-radius: 11px;
+      background: #15395f; color: #fff; font-size: 15px; font-weight: 900; cursor: pointer;
+    }
+    .setup-error { min-height: 18px; margin-top: 9px; color: #a13737; font-size: 13px; font-weight: 700; }
+
+    .settings-button {
+      position: fixed;
+      left: 10px;
+      bottom: 10px;
+      z-index: 60;
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(21,57,95,.18);
+      border-radius: 50%;
+      background: rgba(255,255,255,.92);
       color: #15395f;
+      cursor: pointer;
+      font-size: 16px;
+      box-shadow: 0 6px 18px rgba(21,57,95,.12);
     }
 
-    .small {
-      margin-top: 14px;
-      color: #74879a;
-      font-size: 12px;
-      line-height: 1.5;
-      text-align: center;
-    }
-
-    body.embedded {
-      min-height: 0;
-      background: #0f1720;
-    }
-
-    body.embedded .page {
-      width: 100%;
-      margin: 0;
-      padding: 0;
-    }
-
-    body.embedded h1,
-    body.embedded .subtitle,
-    body.embedded .session-pill,
-    body.embedded .close-camera-button,
-    body.embedded .small {
-      display: none;
-    }
-
-    body.embedded .card {
-      padding: 0;
-      border-radius: 0;
-      box-shadow: none;
-      background: #0f1720;
-    }
-
-    body.embedded #reader {
-      border-radius: 0;
-    }
-
-    body.embedded #status {
-      min-height: 60px;
-      margin: 0;
-      border-radius: 0;
-      padding: 11px 12px;
-      font-size: 14px;
-    }
-
-    body.embedded #retryButton {
-      width: calc(100% - 24px);
-      margin: 10px 12px 12px;
-    }
-
-    @media (max-width: 480px) {
-      .page { padding: 14px 10px 24px; }
-      h1 { font-size: 24px; }
-      .subtitle { font-size: 15px; }
-      .card { padding: 12px; }
-      #status { font-size: 14px; }
-
-      body.embedded .page { padding: 0; }
-      body.embedded .card { padding: 0; }
+    @media (max-width: 600px) {
+      .camera-float { width: 226px; right: 10px; bottom: 10px; border-radius: 13px; }
+      .camera-head { min-height: 38px; padding: 7px 9px; }
+      .camera-title { font-size: 11px; }
+      .camera-pill { font-size: 9px; }
+      #reader { min-height: 132px; }
+      #cameraStatus { min-height: 42px; font-size: 11px; padding: 7px 8px; }
+      .settings-button { left: 8px; bottom: 8px; }
     }
   </style>
 </head>
-
 <body>
-  <main class="page">
-    <h1>GATE PASS CAMERA</h1>
-    <div class="subtitle">
-      Keep this camera open. Present one student QR code at a time.
+  <iframe id="gatePassFrame" title="WICS Gate Pass V27" referrerpolicy="origin" allow="clipboard-read; clipboard-write"></iframe>
+
+  <section id="cameraFloat" class="camera-float" hidden aria-label="QR camera scanner">
+    <div id="cameraHead" class="camera-head">
+      <div class="camera-title">QR CAMERA</div>
+      <div class="camera-pill">CONTINUOUS</div>
     </div>
+    <div id="reader"></div>
+    <div id="cameraStatus">Connecting to Gate Pass…</div>
+    <button id="retryCamera" type="button" hidden>RETRY CAMERA</button>
+  </section>
 
-    <div class="session-pill">CONTINUOUS SCANNING SESSION</div>
+  <button id="settingsButton" class="settings-button" type="button" title="Change Gate Pass URL">⚙</button>
 
-    <section class="card">
-      <div id="reader"></div>
-
-      <div id="status">
-        Starting camera…
-      </div>
-
-      <button
-        id="retryButton"
-        class="button"
-        type="button"
-        hidden
-        onclick="resumeSession()"
-      >
-        RESUME CAMERA
-      </button>
-
-      <button
-        class="button secondary close-camera-button"
-        type="button"
-        onclick="closeScannerWindow()"
-      >
-        CLOSE CAMERA
-      </button>
-
-      <div class="small">
-        The camera remains open after a successful scan. It waits for Gate Pass
-        to confirm the save, then automatically becomes ready for the next student.
-        The page sends only the decoded Student ID to Gate Pass.
-      </div>
-    </section>
-  </main>
+  <div id="setupOverlay" class="setup-overlay" hidden>
+    <div class="setup-card">
+      <h1>Connect V27 Gate Pass</h1>
+      <p>Paste the V27 Apps Script web app URL. This is saved only in this browser.</p>
+      <input id="appUrlInput" type="url" placeholder="https://script.google.com/.../exec" autocomplete="off">
+      <button id="saveAppUrl" type="button">SAVE AND OPEN GATE PASS</button>
+      <div id="setupError" class="setup-error"></div>
+    </div>
+  </div>
 
   <script>
-    const statusBox = document.getElementById('status');
-    const retryButton = document.getElementById('retryButton');
+    const APP_URL_KEY = 'WICS_GATE_PASS_V27_APP_URL';
+    const gatePassFrame = document.getElementById('gatePassFrame');
+    const cameraFloat = document.getElementById('cameraFloat');
+    const cameraStatus = document.getElementById('cameraStatus');
+    const retryCamera = document.getElementById('retryCamera');
+    const setupOverlay = document.getElementById('setupOverlay');
+    const appUrlInput = document.getElementById('appUrlInput');
+    const setupError = document.getElementById('setupError');
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const embeddedMode =
-      urlParams.get('embedded') === '1' &&
-      window.parent &&
-      window.parent !== window;
-
-    if (embeddedMode) {
-      document.body.classList.add('embedded');
-    }
-
+    let gatePassReady = false;
     let scanner = null;
+    let cameraStarted = false;
     let awaitingServer = false;
     let lastAcceptedCode = '';
     let lastAcceptedAt = 0;
@@ -232,76 +202,101 @@
     let confirmationTimer = null;
     let audioContext = null;
 
-    function setStatus(text, type) {
-      statusBox.textContent = text;
-      statusBox.className = type || '';
+    function setCameraStatus(text, type) {
+      cameraStatus.textContent = text;
+      cameraStatus.className = type || '';
     }
 
-    function getGatePassTarget() {
-      if (embeddedMode && window.parent && window.parent !== window) {
-        return window.parent;
+    function validAppsScriptUrl(value) {
+      try {
+        const url = new URL(String(value || '').trim());
+        return url.protocol === 'https:' &&
+          (url.hostname === 'script.google.com' || url.hostname.endsWith('.googleusercontent.com'));
+      } catch (error) {
+        return false;
       }
-
-      if (window.opener && !window.opener.closed) {
-        return window.opener;
-      }
-
-      return null;
     }
 
-    function closeScannerWindow() {
-      if (embeddedMode) {
+    function getSavedAppUrl() {
+      const query = new URLSearchParams(location.search).get('app');
+      if (query && validAppsScriptUrl(query)) {
+        localStorage.setItem(APP_URL_KEY, query);
+        return query;
+      }
+      return localStorage.getItem(APP_URL_KEY) || '';
+    }
+
+    function showSetup(message) {
+      setupError.textContent = message || '';
+      appUrlInput.value = getSavedAppUrl();
+      setupOverlay.hidden = false;
+      setTimeout(function(){ appUrlInput.focus(); }, 50);
+    }
+
+    function connectGatePass(url) {
+      gatePassReady = false;
+      cameraFloat.hidden = true;
+      setCameraStatus('Connecting to Gate Pass…', '');
+      gatePassFrame.src = url;
+    }
+
+    document.getElementById('saveAppUrl').addEventListener('click', function() {
+      const value = String(appUrlInput.value || '').trim();
+      if (!validAppsScriptUrl(value)) {
+        setupError.textContent = 'Paste the HTTPS URL from your V27 Apps Script web app deployment.';
         return;
       }
-      window.close();
-    }
+      localStorage.setItem(APP_URL_KEY, value);
+      setupOverlay.hidden = true;
+      connectGatePass(value);
+    });
+
+    document.getElementById('settingsButton').addEventListener('click', function() {
+      showSetup('');
+    });
+
+    retryCamera.addEventListener('click', function() {
+      startCamera();
+    });
 
     function vibrate(pattern) {
-      try {
-        if (navigator.vibrate) navigator.vibrate(pattern);
-      } catch (error) {}
+      try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (error) {}
     }
 
     function playTone(success) {
       try {
         if (!audioContext) {
-          const AudioContextClass =
-            window.AudioContext || window.webkitAudioContext;
-          if (!AudioContextClass) return;
-          audioContext = new AudioContextClass();
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (!Ctx) return;
+          audioContext = new Ctx();
         }
-
-        if (audioContext.state === 'suspended') {
-          audioContext.resume().catch(function(){});
-        }
-
+        if (audioContext.state === 'suspended') audioContext.resume().catch(function(){});
         const osc = audioContext.createOscillator();
         const gain = audioContext.createGain();
-
         osc.type = 'sine';
         osc.frequency.value = success ? 880 : 240;
-        gain.gain.value = 0.06;
-
+        gain.gain.value = .055;
         osc.connect(gain);
         gain.connect(audioContext.destination);
-
         osc.start();
-        osc.stop(audioContext.currentTime + (success ? 0.11 : 0.18));
+        osc.stop(audioContext.currentTime + (success ? .11 : .18));
       } catch (error) {}
     }
 
-    async function startScanner() {
-      retryButton.hidden = true;
+    async function startCamera() {
+      if (!gatePassReady) {
+        setCameraStatus('Waiting for Gate Pass…', 'working');
+        return;
+      }
+
+      retryCamera.hidden = true;
       awaitingServer = false;
       clearFramesAfterScan = 0;
-      setStatus('Starting camera…', '');
+      setCameraStatus('Starting camera…', '');
 
       if (typeof Html5Qrcode === 'undefined') {
-        setStatus(
-          'Scanner library could not load. Check the internet connection and reload this page.',
-          'error'
-        );
-        retryButton.hidden = false;
+        setCameraStatus('Camera library could not load. Check the internet connection.', 'error');
+        retryCamera.hidden = false;
         return;
       }
 
@@ -311,216 +306,172 @@
           try { scanner.clear(); } catch (error) {}
         }
 
-        scanner = new Html5Qrcode(
-          'reader',
-          {
-            formatsToSupport: [
-              Html5QrcodeSupportedFormats.QR_CODE,
-              Html5QrcodeSupportedFormats.CODE_128,
-              Html5QrcodeSupportedFormats.CODE_39,
-              Html5QrcodeSupportedFormats.CODE_93,
-              Html5QrcodeSupportedFormats.EAN_13,
-              Html5QrcodeSupportedFormats.EAN_8
-            ],
-            verbose: false
-          }
-        );
-
-        const config = {
-          fps: 12,
-          qrbox: function(viewfinderWidth, viewfinderHeight) {
-            const size =
-              Math.floor(
-                Math.min(viewfinderWidth, viewfinderHeight) * 0.72
-              );
-
-            return {
-              width: size,
-              height: size
-            };
-          },
-          aspectRatio: 1.333333
-        };
+        scanner = new Html5Qrcode('reader', {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.CODE_93,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8
+          ],
+          verbose: false
+        });
 
         await scanner.start(
           { facingMode: 'environment' },
-          config,
+          {
+            fps: 12,
+            qrbox: function(w, h) {
+              const size = Math.floor(Math.min(w, h) * .68);
+              return { width: size, height: size };
+            },
+            aspectRatio: 1.333333
+          },
           onScanSuccess,
           onScanFailure
         );
 
-        setStatus(
-          embeddedMode
-            ? 'READY — next student may scan.'
-            : 'READY — place one student code inside the frame.',
-          ''
-        );
-      }
-      catch (error) {
-        setStatus(
-          'Camera could not start. Allow camera permission in the browser, then tap RESUME CAMERA.',
-          'error'
-        );
-
-        retryButton.hidden = false;
+        cameraStarted = true;
+        setCameraStatus('READY — next student.', '');
+      } catch (error) {
+        cameraStarted = false;
+        setCameraStatus('Camera could not start. Allow camera permission, then retry.', 'error');
+        retryCamera.hidden = false;
       }
     }
 
     function onScanFailure() {
-      if (lastAcceptedCode) {
-        clearFramesAfterScan++;
-      }
+      if (lastAcceptedCode) clearFramesAfterScan++;
     }
 
     function onScanSuccess(decodedText) {
-      const studentId =
-        String(decodedText || '')
-        .trim()
-        .toUpperCase();
-
-      if (!studentId || awaitingServer) return;
+      const studentId = String(decodedText || '').trim().toUpperCase();
+      if (!studentId || awaitingServer || !gatePassReady) return;
 
       const now = Date.now();
-
-      // Prevent one QR code held in the frame from being recorded repeatedly.
       if (
         studentId === lastAcceptedCode &&
         now - lastAcceptedAt < 5000 &&
         clearFramesAfterScan < 3
-      ) {
-        return;
-      }
-
-      const gatePassTarget =
-        getGatePassTarget();
-
-      if (!gatePassTarget) {
-        setStatus(
-          'Gate Pass is no longer connected. Reopen the Gate Pass page and try again.',
-          'error'
-        );
-        retryButton.hidden = false;
-        return;
-      }
+      ) return;
 
       awaitingServer = true;
       lastAcceptedCode = studentId;
       lastAcceptedAt = now;
       clearFramesAfterScan = 0;
+      setCameraStatus('CODE READ — ' + studentId + ' • saving…', 'working');
 
-      setStatus(
-        'CODE READ — ' + studentId +
-        (embeddedMode
-          ? '\nWaiting for Gate Pass save confirmation…'
-          : '\nWaiting for Gate Pass save confirmation… If staff input is requested, switch to the Gate Pass tab.'),
-        'working'
-      );
-
-      gatePassTarget.postMessage(
-        {
-          type: 'WICS_GATEPASS_CAMERA_SCAN',
-          studentId: studentId
-        },
+      gatePassFrame.contentWindow.postMessage(
+        { type: 'WICS_GATEPASS_CAMERA_SCAN', studentId: studentId },
         '*'
       );
 
       if (confirmationTimer) clearTimeout(confirmationTimer);
-
       confirmationTimer = setTimeout(function() {
         confirmationTimer = null;
-
         if (!awaitingServer) return;
-
-        setStatus(
-          'Still waiting for Gate Pass confirmation. Check the Gate Pass tab before scanning this student again.',
-          'error'
-        );
-
-        retryButton.hidden = false;
-      }, 12000);
+        setCameraStatus('Still waiting. Check Gate Pass for a staff action or error.', 'error');
+      }, 15000);
     }
 
-    function resumeSession() {
-      retryButton.hidden = true;
-      awaitingServer = false;
-      clearFramesAfterScan = 0;
+    window.addEventListener('message', function(event) {
+      if (event.source !== gatePassFrame.contentWindow) return;
+      const data = event.data || {};
 
-      setStatus(
-        'READY — place one student code inside the frame.',
-        ''
-      );
-    }
-
-    window.addEventListener(
-      'message',
-      function(event) {
-        const data = event.data || {};
-
-        if (data.type !== 'WICS_GATEPASS_CAMERA_RESULT') return;
-
-        const studentId =
-          String(data.studentId || '')
-          .trim()
-          .toUpperCase();
-
-        if (!studentId || studentId !== lastAcceptedCode) return;
-
-        if (confirmationTimer) {
-          clearTimeout(confirmationTimer);
-          confirmationTimer = null;
-        }
-
-        if (data.success) {
-          const details = [
-            data.studentName || studentId,
-            data.movement || '',
-            data.time || ''
-          ].filter(Boolean).join(' • ');
-
-          setStatus(
-            '✓ SAVED — ' + details,
-            'success'
-          );
-
-          playTone(true);
-          vibrate([90,45,90]);
-
-          setTimeout(function() {
-            awaitingServer = false;
-            retryButton.hidden = true;
-
-            setStatus(
-              'READY — next student.',
-              ''
-            );
-          }, 850);
-
-          return;
-        }
-
-        awaitingServer = false;
-
-        setStatus(
-          (data.status || 'NOT RECORDED') +
-          (data.message ? ' — ' + data.message : ''),
-          'error'
-        );
-
-        playTone(false);
-        vibrate([180,80,180]);
-
-        setTimeout(function() {
-          if (!awaitingServer) {
-            setStatus(
-              'READY — scan again when the issue is resolved.',
-              ''
-            );
-          }
-        }, 1800);
+      if (data.type === 'WICS_GATEPASS_BRIDGE_READY') {
+        gatePassReady = true;
+        cameraFloat.hidden = false;
+        setCameraStatus('Gate Pass connected. Starting camera…', '');
+        if (!cameraStarted) startCamera();
+        return;
       }
-    );
 
-    window.addEventListener('load', startScanner);
+      if (data.type !== 'WICS_GATEPASS_CAMERA_RESULT') return;
+
+      const studentId = String(data.studentId || '').trim().toUpperCase();
+      if (!studentId || studentId !== lastAcceptedCode) return;
+
+      if (data.pending) {
+        if (confirmationTimer) { clearTimeout(confirmationTimer); confirmationTimer = null; }
+        awaitingServer = true;
+        setCameraStatus(
+          (data.status || 'STAFF ACTION REQUIRED') +
+          (data.message ? ' — ' + data.message : ''),
+          'working'
+        );
+        return;
+      }
+
+      if (confirmationTimer) { clearTimeout(confirmationTimer); confirmationTimer = null; }
+
+      if (data.success) {
+        const details = [data.studentName || studentId, data.movement || '', data.time || '']
+          .filter(Boolean).join(' • ');
+        setCameraStatus('✓ SAVED — ' + details, 'success');
+        playTone(true);
+        vibrate([90,45,90]);
+        setTimeout(function() {
+          awaitingServer = false;
+          retryCamera.hidden = true;
+          setCameraStatus('READY — next student.', '');
+        }, 900);
+        return;
+      }
+
+      awaitingServer = false;
+      setCameraStatus(
+        (data.status || 'NOT RECORDED') + (data.message ? ' — ' + data.message : ''),
+        'error'
+      );
+      playTone(false);
+      vibrate([180,80,180]);
+      setTimeout(function() {
+        if (!awaitingServer) setCameraStatus('READY — scan again when resolved.', '');
+      }, 1800);
+    });
+
+    // Small draggable camera window. Clamp it to the viewport.
+    (function enableDrag() {
+      const panel = cameraFloat;
+      const handle = document.getElementById('cameraHead');
+      let dragging = false, dx = 0, dy = 0;
+
+      handle.addEventListener('pointerdown', function(e) {
+        dragging = true;
+        const rect = panel.getBoundingClientRect();
+        dx = e.clientX - rect.left;
+        dy = e.clientY - rect.top;
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+        handle.setPointerCapture(e.pointerId);
+      });
+
+      handle.addEventListener('pointermove', function(e) {
+        if (!dragging) return;
+        const maxX = Math.max(0, window.innerWidth - panel.offsetWidth);
+        const maxY = Math.max(0, window.innerHeight - panel.offsetHeight);
+        const x = Math.max(0, Math.min(maxX, e.clientX - dx));
+        const y = Math.max(0, Math.min(maxY, e.clientY - dy));
+        panel.style.left = x + 'px';
+        panel.style.top = y + 'px';
+      });
+
+      function stop(e) {
+        if (!dragging) return;
+        dragging = false;
+        try { handle.releasePointerCapture(e.pointerId); } catch (error) {}
+      }
+      handle.addEventListener('pointerup', stop);
+      handle.addEventListener('pointercancel', stop);
+    })();
+
+    const initialUrl = getSavedAppUrl();
+    if (initialUrl && validAppsScriptUrl(initialUrl)) {
+      connectGatePass(initialUrl);
+    } else {
+      showSetup('');
+    }
   </script>
 </body>
 </html>
