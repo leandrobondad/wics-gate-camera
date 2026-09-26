@@ -100,6 +100,8 @@
       cursor: pointer;
     }
 
+    .setup-overlay[hidden], .settings-button[hidden] { display: none !important; }
+
     .setup-overlay {
       position: fixed;
       inset: 0;
@@ -170,7 +172,7 @@
     <button id="retryCamera" type="button" hidden>RETRY CAMERA</button>
   </section>
 
-  <button id="settingsButton" class="settings-button" type="button" title="Change Gate Pass URL">⚙</button>
+  <button id="settingsButton" class="settings-button" type="button" title="Change Gate Pass URL" hidden>⚙</button>
 
   <div id="setupOverlay" class="setup-overlay" hidden>
     <div class="setup-card">
@@ -183,6 +185,7 @@
   </div>
 
   <script>
+    const FIXED_GATE_PASS_URL = 'https://script.google.com/a/macros/wics.jp/s/AKfycbysXGZ2lpg0d3xESxAGjinA3HGjj_8LOIRxvjhvNH_evX5-7avJar2qG1ae0fi79YNr/exec';
     const APP_URL_KEY = 'WICS_GATE_PASS_V27_APP_URL';
     const gatePassFrame = document.getElementById('gatePassFrame');
     const cameraFloat = document.getElementById('cameraFloat');
@@ -252,7 +255,8 @@
     });
 
     document.getElementById('settingsButton').addEventListener('click', function() {
-      showSetup('');
+      // Disabled in fixed school kiosk mode.
+      return;
     });
 
     retryCamera.addEventListener('click', function() {
@@ -466,12 +470,10 @@
       handle.addEventListener('pointercancel', stop);
     })();
 
-    const initialUrl = getSavedAppUrl();
-    if (initialUrl && validAppsScriptUrl(initialUrl)) {
-      connectGatePass(initialUrl);
-    } else {
-      showSetup('');
-    }
+    // V27 school kiosk mode: connect automatically.
+    // No browser setup screen and no URL entry is required.
+    setupOverlay.hidden = true;
+    connectGatePass(FIXED_GATE_PASS_URL);
   </script>
 </body>
 </html>
