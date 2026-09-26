@@ -112,12 +112,207 @@
       text-align: center;
     }
 
+    .exception-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      padding: 16px;
+      background: rgba(13,31,50,0.66);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .exception-backdrop.show {
+      display: flex;
+    }
+
+    .exception-card {
+      width: 100%;
+      max-width: 520px;
+      max-height: 94dvh;
+      overflow-y: auto;
+      background: #fff;
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.28);
+    }
+
+    .exception-title {
+      margin: 0;
+      text-align: center;
+      color: #15395f;
+      font-size: 24px;
+      font-weight: 900;
+    }
+
+    .exception-student {
+      margin-top: 14px;
+      padding: 13px;
+      border-radius: 12px;
+      background: #f3f6fa;
+      text-align: center;
+    }
+
+    .exception-student-name {
+      color: #15395f;
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    .exception-status {
+      margin-top: 5px;
+      color: #63778d;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .exception-label {
+      display: block;
+      margin: 18px 0 7px;
+      color: #405a74;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    #cameraExceptionReason {
+      width: 100%;
+      min-height: 105px;
+      resize: vertical;
+      border: 2px solid #bac5d0;
+      border-radius: 11px;
+      padding: 12px;
+      font: inherit;
+      font-size: 16px;
+      color: #223a53;
+      outline: none;
+    }
+
+    #cameraExceptionReason:focus {
+      border-color: #15395f;
+    }
+
+    .exception-choice-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .exception-choice {
+      min-height: 54px;
+      border: 2px solid #15395f;
+      border-radius: 11px;
+      background: #fff;
+      color: #15395f;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .exception-choice.excused {
+      border-color: #30784e;
+      color: #25613e;
+    }
+
+    .exception-choice.unexcused {
+      border-color: #a44747;
+      color: #8c3535;
+    }
+
+    .exception-choice.selected {
+      background: #15395f;
+      border-color: #15395f;
+      color: #fff;
+    }
+
+    .exception-error {
+      min-height: 20px;
+      margin-top: 8px;
+      color: #a83b3b;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .exception-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .exception-action {
+      min-height: 52px;
+      border: 0;
+      border-radius: 11px;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .exception-action.cancel {
+      background: #e9eef3;
+      color: #4d6378;
+    }
+
+    .exception-action.save {
+      background: #15395f;
+      color: #fff;
+    }
+
     @media (max-width: 480px) {
       .page { padding: 14px 10px 24px; }
       h1 { font-size: 24px; }
       .subtitle { font-size: 15px; }
       .card { padding: 12px; }
       #status { font-size: 14px; }
+
+      .exception-backdrop {
+        padding: 0;
+        align-items: stretch;
+      }
+
+      .exception-card {
+        width: 100%;
+        max-width: none;
+        height: 100dvh;
+        max-height: 100dvh;
+        border-radius: 0;
+        padding: 20px 16px calc(18px + env(safe-area-inset-bottom));
+        display: flex;
+        flex-direction: column;
+      }
+
+      .exception-title {
+        font-size: 26px;
+      }
+
+      .exception-student-name {
+        font-size: 24px;
+      }
+
+      .exception-choice-row,
+      .exception-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .exception-choice,
+      .exception-action {
+        min-height: 58px;
+        font-size: 17px;
+      }
+
+      #cameraExceptionReason {
+        min-height: 135px;
+      }
+
+      .exception-actions {
+        position: sticky;
+        bottom: 0;
+        margin-top: auto;
+        padding-top: 12px;
+        padding-bottom: env(safe-area-inset-bottom);
+        background: rgba(255,255,255,0.98);
+      }
     }
   </style>
 </head>
@@ -157,14 +352,119 @@
       </button>
 
       <div class="small">
-        The camera stays open for the whole gate session. A short beep confirms QR recognition immediately; Gate Pass then saves in the background and automatically rearms for the next student. Attendance exceptions are saved as PENDING REVIEW instead of stopping the line.
+        The camera stays open for the whole gate session. QR recognition, attendance exceptions, Time In, Time Out, and errors each use a different sound. If a student is tardy or another attendance exception is detected, enter the reason directly on this camera page.
       </div>
     </section>
   </main>
 
+  <div
+    id="cameraExceptionBackdrop"
+    class="exception-backdrop"
+  >
+    <section
+      class="exception-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cameraExceptionTitle"
+    >
+      <h2
+        id="cameraExceptionTitle"
+        class="exception-title"
+      >
+        ATTENDANCE EXCEPTION
+      </h2>
+
+      <div class="exception-student">
+        <div
+          id="cameraExceptionStudent"
+          class="exception-student-name"
+        ></div>
+        <div
+          id="cameraExceptionStatus"
+          class="exception-status"
+        ></div>
+      </div>
+
+      <label
+        id="cameraExceptionReasonLabel"
+        class="exception-label"
+        for="cameraExceptionReason"
+      >
+        Reason
+      </label>
+
+      <textarea
+        id="cameraExceptionReason"
+        placeholder="Type the reason here..."
+      ></textarea>
+
+      <div class="exception-label">
+        Classification
+      </div>
+
+      <div class="exception-choice-row">
+        <button
+          id="cameraExcusedButton"
+          type="button"
+          class="exception-choice excused"
+          onclick="selectCameraExceptionClassification('Excused')"
+        >
+          EXCUSED
+        </button>
+
+        <button
+          id="cameraUnexcusedButton"
+          type="button"
+          class="exception-choice unexcused"
+          onclick="selectCameraExceptionClassification('Unexcused')"
+        >
+          UNEXCUSED
+        </button>
+      </div>
+
+      <div
+        id="cameraExceptionError"
+        class="exception-error"
+      ></div>
+
+      <div class="exception-actions">
+        <button
+          type="button"
+          class="exception-action cancel"
+          onclick="cancelCameraException()"
+        >
+          CANCEL SCAN
+        </button>
+
+        <button
+          type="button"
+          class="exception-action save"
+          onclick="submitCameraException()"
+        >
+          SAVE ATTENDANCE
+        </button>
+      </div>
+    </section>
+  </div>
+
   <script>
     const statusBox = document.getElementById('status');
     const retryButton = document.getElementById('retryButton');
+
+    const cameraExceptionBackdrop =
+      document.getElementById('cameraExceptionBackdrop');
+    const cameraExceptionTitle =
+      document.getElementById('cameraExceptionTitle');
+    const cameraExceptionStudent =
+      document.getElementById('cameraExceptionStudent');
+    const cameraExceptionStatus =
+      document.getElementById('cameraExceptionStatus');
+    const cameraExceptionReasonLabel =
+      document.getElementById('cameraExceptionReasonLabel');
+    const cameraExceptionReason =
+      document.getElementById('cameraExceptionReason');
+    const cameraExceptionError =
+      document.getElementById('cameraExceptionError');
 
     let scanner = null;
     let awaitingServer = false;
@@ -173,6 +473,8 @@
     let clearFramesAfterScan = 0;
     let confirmationTimer = null;
     let audioContext = null;
+    let pendingCameraException = null;
+    let cameraExceptionClassification = '';
 
     function setStatus(text, type) {
       statusBox.textContent = text;
@@ -189,61 +491,454 @@
       } catch (error) {}
     }
 
-    function playTone(success) {
+    function ensureAudioContext() {
       try {
         if (!audioContext) {
           const AudioContextClass =
-            window.AudioContext || window.webkitAudioContext;
-          if (!AudioContextClass) return;
-          audioContext = new AudioContextClass();
+            window.AudioContext ||
+            window.webkitAudioContext;
+
+          if (!AudioContextClass) {
+            return null;
+          }
+
+          audioContext =
+            new AudioContextClass();
         }
 
-        if (audioContext.state === 'suspended') {
-          audioContext.resume().catch(function(){});
+        if (
+          audioContext.state ===
+            'suspended'
+        ) {
+          audioContext
+            .resume()
+            .catch(function(){});
         }
 
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.value = success ? 880 : 240;
-        gain.gain.value = 0.06;
-
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-
-        osc.start();
-        osc.stop(audioContext.currentTime + (success ? 0.11 : 0.18));
-      } catch (error) {}
+        return audioContext;
+      }
+      catch (error) {
+        return null;
+      }
     }
+
+
+    function cameraToneSequence(
+      notes
+    ) {
+      const ctx =
+        ensureAudioContext();
+
+      if (!ctx) {
+        return;
+      }
+
+      let start =
+        ctx.currentTime;
+
+      notes.forEach(
+        function(note) {
+          const osc =
+            ctx.createOscillator();
+
+          const gain =
+            ctx.createGain();
+
+          osc.type =
+            note.waveform ||
+            'triangle';
+
+          osc.frequency.setValueAtTime(
+            note.frequency,
+            start
+          );
+
+          gain.gain.setValueAtTime(
+            0.0001,
+            start
+          );
+
+          gain.gain.linearRampToValueAtTime(
+            note.volume || 0.08,
+            start + 0.015
+          );
+
+          gain.gain.exponentialRampToValueAtTime(
+            0.0001,
+            start + note.duration
+          );
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc.start(start);
+          osc.stop(
+            start +
+            note.duration +
+            0.02
+          );
+
+          start +=
+            note.duration +
+            (
+              note.pause == null
+                ? 0.035
+                : note.pause
+            );
+        }
+      );
+    }
+
+
+    function playTimeInSavedSound() {
+      cameraToneSequence([
+        {
+          frequency: 784,
+          duration: 0.07,
+          volume: 0.085
+        },
+        {
+          frequency: 1047,
+          duration: 0.08,
+          volume: 0.09
+        },
+        {
+          frequency: 1568,
+          duration: 0.13,
+          volume: 0.10
+        }
+      ]);
+    }
+
+
+    function playTimeOutSavedSound() {
+      cameraToneSequence([
+        {
+          frequency: 1568,
+          duration: 0.07,
+          volume: 0.085
+        },
+        {
+          frequency: 1047,
+          duration: 0.08,
+          volume: 0.09
+        },
+        {
+          frequency: 784,
+          duration: 0.13,
+          volume: 0.10
+        }
+      ]);
+    }
+
+
+    function playExceptionAlertSound() {
+      cameraToneSequence([
+        {
+          frequency: 659,
+          duration: 0.10,
+          volume: 0.10,
+          waveform: 'square',
+          pause: 0.08
+        },
+        {
+          frequency: 523,
+          duration: 0.13,
+          volume: 0.11,
+          waveform: 'square'
+        }
+      ]);
+    }
+
+
+    function playCameraErrorSound() {
+      cameraToneSequence([
+        {
+          frequency: 294,
+          duration: 0.12,
+          volume: 0.10,
+          waveform: 'square',
+          pause: 0.05
+        },
+        {
+          frequency: 220,
+          duration: 0.18,
+          volume: 0.11,
+          waveform: 'square'
+        }
+      ]);
+    }
+
 
     function playRecognitionTone() {
-      try {
-        if (!audioContext) {
-          const AudioContextClass =
-            window.AudioContext || window.webkitAudioContext;
-          if (!AudioContextClass) return;
-          audioContext = new AudioContextClass();
+      cameraToneSequence([
+        {
+          frequency: 1319,
+          duration: 0.055,
+          volume: 0.075,
+          waveform: 'square',
+          pause: 0
         }
-
-        if (audioContext.state === 'suspended') {
-          audioContext.resume().catch(function(){});
-        }
-
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-
-        osc.type = 'square';
-        osc.frequency.value = 1046;
-        gain.gain.value = 0.045;
-
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-
-        osc.start();
-        osc.stop(audioContext.currentTime + 0.075);
-      } catch (error) {}
+      ]);
     }
+
+
+    function updateCameraExceptionButtons() {
+
+      document
+        .getElementById(
+          'cameraExcusedButton'
+        )
+        .classList
+        .toggle(
+          'selected',
+          cameraExceptionClassification ===
+            'Excused'
+        );
+
+      document
+        .getElementById(
+          'cameraUnexcusedButton'
+        )
+        .classList
+        .toggle(
+          'selected',
+          cameraExceptionClassification ===
+            'Unexcused'
+        );
+
+    }
+
+
+    function selectCameraExceptionClassification(
+      value
+    ) {
+
+      cameraExceptionClassification =
+        value;
+
+      updateCameraExceptionButtons();
+
+    }
+
+
+    function showCameraExceptionPrompt(
+      data
+    ) {
+
+      pendingCameraException =
+        data;
+
+      cameraExceptionClassification =
+        '';
+
+      cameraExceptionTitle.textContent =
+        data.title ||
+        'ATTENDANCE EXCEPTION';
+
+      cameraExceptionStudent.textContent =
+        data.studentName ||
+        data.studentId ||
+        '';
+
+      cameraExceptionStatus.textContent =
+        [
+          data.movement || '',
+          data.status || ''
+        ]
+        .filter(Boolean)
+        .join(' • ');
+
+      cameraExceptionReasonLabel.textContent =
+        data.reasonLabel ||
+        'Reason';
+
+      cameraExceptionReason.value =
+        '';
+
+      cameraExceptionError.textContent =
+        '';
+
+      updateCameraExceptionButtons();
+
+      cameraExceptionBackdrop
+        .classList
+        .add(
+          'show'
+        );
+
+      playExceptionAlertSound();
+      vibrate([90,55,90]);
+
+      setStatus(
+        (data.status || 'ATTENDANCE EXCEPTION') +
+        ' — DETAILS REQUIRED',
+        'working'
+      );
+
+      setTimeout(
+        function() {
+          cameraExceptionReason.focus();
+        },
+        100
+      );
+
+    }
+
+
+    function hideCameraExceptionPrompt() {
+
+      cameraExceptionBackdrop
+        .classList
+        .remove(
+          'show'
+        );
+
+    }
+
+
+    function restartConfirmationTimer() {
+
+      if (
+        confirmationTimer
+      ) {
+        clearTimeout(
+          confirmationTimer
+        );
+      }
+
+      confirmationTimer =
+        setTimeout(
+          function() {
+
+            confirmationTimer =
+              null;
+
+            if (
+              !awaitingServer
+            ) {
+              return;
+            }
+
+            setStatus(
+              'Still saving. Please wait a moment before scanning this student again.',
+              'error'
+            );
+
+            retryButton.hidden =
+              false;
+
+          },
+          12000
+        );
+
+    }
+
+
+    function submitCameraException() {
+
+      if (
+        !pendingCameraException
+      ) {
+        return;
+      }
+
+      const reason =
+        String(
+          cameraExceptionReason.value ||
+          ''
+        )
+        .trim();
+
+      if (
+        !reason
+      ) {
+        cameraExceptionError.textContent =
+          'Please enter the reason.';
+
+        cameraExceptionReason.focus();
+        return;
+      }
+
+      if (
+        !cameraExceptionClassification
+      ) {
+        cameraExceptionError.textContent =
+          'Please choose Excused or Unexcused.';
+        return;
+      }
+
+      if (
+        !window.opener ||
+        window.opener.closed
+      ) {
+        cameraExceptionError.textContent =
+          'Gate Pass is no longer connected.';
+        return;
+      }
+
+      const data =
+        pendingCameraException;
+
+      hideCameraExceptionPrompt();
+
+      setStatus(
+        'DETAILS RECEIVED — SAVING…',
+        'working'
+      );
+
+      window.opener.postMessage(
+        {
+          type:
+            'WICS_GATEPASS_CAMERA_EXCEPTION_SUBMIT',
+          studentId:
+            data.studentId,
+          reason:
+            reason,
+          excuseClassification:
+            cameraExceptionClassification
+        },
+        '*'
+      );
+
+      restartConfirmationTimer();
+
+    }
+
+
+    function cancelCameraException() {
+
+      if (
+        !pendingCameraException
+      ) {
+        return;
+      }
+
+      const data =
+        pendingCameraException;
+
+      pendingCameraException =
+        null;
+
+      hideCameraExceptionPrompt();
+
+      if (
+        window.opener &&
+        !window.opener.closed
+      ) {
+        window.opener.postMessage(
+          {
+            type:
+              'WICS_GATEPASS_CAMERA_EXCEPTION_CANCEL',
+            studentId:
+              data.studentId
+          },
+          '*'
+        );
+      }
+
+    }
+
 
     async function startScanner() {
       retryButton.hidden = true;
@@ -376,20 +1071,7 @@
         '*'
       );
 
-      if (confirmationTimer) clearTimeout(confirmationTimer);
-
-      confirmationTimer = setTimeout(function() {
-        confirmationTimer = null;
-
-        if (!awaitingServer) return;
-
-        setStatus(
-          'Still saving. Please wait a moment before scanning this student again.',
-          'error'
-        );
-
-        retryButton.hidden = false;
-      }, 12000);
+      restartConfirmationTimer();
     }
 
     function resumeSession() {
@@ -406,72 +1088,211 @@
     window.addEventListener(
       'message',
       function(event) {
-        const data = event.data || {};
 
-        if (data.type !== 'WICS_GATEPASS_CAMERA_RESULT') return;
-
-        const studentId =
-          String(data.studentId || '')
-          .trim()
-          .toUpperCase();
-
-        if (!studentId || studentId !== lastAcceptedCode) return;
-
-        if (confirmationTimer) {
-          clearTimeout(confirmationTimer);
-          confirmationTimer = null;
+        if (
+          window.opener &&
+          event.source !==
+            window.opener
+        ) {
+          return;
         }
 
-        if (data.success) {
-          const details = [
-            data.studentName || studentId,
-            data.movement || '',
-            data.time || '',
-            data.pendingReview ? 'PENDING REVIEW' : ''
-          ].filter(Boolean).join(' • ');
+        const data =
+          event.data || {};
 
-          setStatus(
-            '✓ SAVED — ' + details,
-            'success'
-          );
+        if (
+          data.type ===
+            'WICS_GATEPASS_CAMERA_EXCEPTION'
+        ) {
 
-          playTone(true);
-          vibrate([90,45,90]);
+          const studentId =
+            String(data.studentId || '')
+              .trim()
+              .toUpperCase();
 
-          setTimeout(function() {
-            awaitingServer = false;
-            retryButton.hidden = true;
+          if (
+            !studentId ||
+            studentId !==
+              lastAcceptedCode
+          ) {
+            return;
+          }
 
-            setStatus(
-              'READY — next student.',
-              ''
+          if (
+            confirmationTimer
+          ) {
+            clearTimeout(
+              confirmationTimer
             );
-          }, 500);
+
+            confirmationTimer =
+              null;
+          }
+
+          showCameraExceptionPrompt(
+            data
+          );
 
           return;
         }
 
-        awaitingServer = false;
+        if (
+          data.type ===
+            'WICS_GATEPASS_CAMERA_EXCEPTION_ERROR'
+        ) {
+
+          const studentId =
+            String(data.studentId || '')
+              .trim()
+              .toUpperCase();
+
+          if (
+            !studentId ||
+            studentId !==
+              lastAcceptedCode
+          ) {
+            return;
+          }
+
+          cameraExceptionError.textContent =
+            data.message ||
+            'Please complete the required information.';
+
+          cameraExceptionBackdrop
+            .classList
+            .add(
+              'show'
+            );
+
+          return;
+        }
+
+        if (
+          data.type !==
+            'WICS_GATEPASS_CAMERA_RESULT'
+        ) {
+          return;
+        }
+
+        const studentId =
+          String(data.studentId || '')
+            .trim()
+            .toUpperCase();
+
+        if (
+          !studentId ||
+          studentId !==
+            lastAcceptedCode
+        ) {
+          return;
+        }
+
+        if (
+          confirmationTimer
+        ) {
+          clearTimeout(
+            confirmationTimer
+          );
+
+          confirmationTimer =
+            null;
+        }
+
+        hideCameraExceptionPrompt();
+
+        pendingCameraException =
+          null;
+
+        cameraExceptionClassification =
+          '';
+
+        if (
+          data.success
+        ) {
+
+          const details = [
+            data.studentName || studentId,
+            data.movement || '',
+            data.time || ''
+          ]
+          .filter(Boolean)
+          .join(' • ');
+
+          setStatus(
+            '✓ SAVED — ' +
+            details,
+            'success'
+          );
+
+          if (
+            data.remarks ===
+              'Time In'
+          ) {
+            playTimeInSavedSound();
+            vibrate([90,45,90]);
+          }
+          else {
+            playTimeOutSavedSound();
+            vibrate([150]);
+          }
+
+          setTimeout(
+            function() {
+
+              awaitingServer =
+                false;
+
+              retryButton.hidden =
+                true;
+
+              setStatus(
+                'READY — next student.',
+                ''
+              );
+
+            },
+            650
+          );
+
+          return;
+        }
+
+        awaitingServer =
+          false;
 
         setStatus(
           (data.status || 'NOT RECORDED') +
-          (data.message ? ' — ' + data.message : ''),
+          (
+            data.message
+              ? ' — ' +
+                data.message
+              : ''
+          ),
           'error'
         );
 
-        playTone(false);
+        playCameraErrorSound();
         vibrate([180,80,180]);
 
-        setTimeout(function() {
-          if (!awaitingServer) {
-            setStatus(
-              'READY — scan again when the issue is resolved.',
-              ''
-            );
-          }
-        }, 1800);
+        setTimeout(
+          function() {
+
+            if (
+              !awaitingServer
+            ) {
+              setStatus(
+                'READY — scan again when the issue is resolved.',
+                ''
+              );
+            }
+
+          },
+          1800
+        );
+
       }
     );
+
 
     window.addEventListener('load', startScanner);
   </script>
