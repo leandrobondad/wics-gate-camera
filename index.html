@@ -104,6 +104,29 @@
       color: #15395f;
     }
 
+    .sound-start-button {
+      width: 100%;
+      min-height: 56px;
+      margin-top: 12px;
+      border: 0;
+      border-radius: 12px;
+      background: #15395f;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      display: none;
+    }
+
+    .sound-start-button.show {
+      display: block;
+    }
+
+    .sound-start-button:disabled {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
     .small {
       margin-top: 14px;
       color: #74879a;
@@ -344,6 +367,15 @@
       </button>
 
       <button
+        id="soundStartButton"
+        class="sound-start-button"
+        type="button"
+        onclick="startCameraWithSound()"
+      >
+        START CAMERA &amp; ENABLE SOUND
+      </button>
+
+      <button
         class="button secondary"
         type="button"
         onclick="closeScannerWindow()"
@@ -352,7 +384,7 @@
       </button>
 
       <div class="small">
-        The camera stays open for the whole gate session. QR recognition, attendance exceptions, Time In, Time Out, and errors each use a different sound. If a student is tardy or another attendance exception is detected, enter the reason directly on this camera page.
+        On a phone or tablet, tap START CAMERA & ENABLE SOUND once. The camera then stays open for the whole gate session. QR recognition, attendance exceptions, Time In, Time Out, and errors each use a different sound.
       </div>
     </section>
   </main>
@@ -450,6 +482,7 @@
   <script>
     const statusBox = document.getElementById('status');
     const retryButton = document.getElementById('retryButton');
+    const soundStartButton = document.getElementById('soundStartButton');
 
     const cameraExceptionBackdrop =
       document.getElementById('cameraExceptionBackdrop');
@@ -473,6 +506,7 @@
     let clearFramesAfterScan = 0;
     let confirmationTimer = null;
     let audioContext = null;
+    let mobileSoundUnlocked = false;
     let pendingCameraException = null;
     let cameraExceptionClassification = '';
 
@@ -490,6 +524,127 @@
         if (navigator.vibrate) navigator.vibrate(pattern);
       } catch (error) {}
     }
+
+    function isMobileOrTouchDevice() {
+      try {
+        return (
+          Number(navigator.maxTouchPoints || 0) > 0 ||
+          (
+            window.matchMedia &&
+            window.matchMedia('(pointer: coarse)').matches
+          )
+        );
+      }
+      catch (error) {
+        return false;
+      }
+    }
+
+
+    async function unlockMobileAudioFromGesture() {
+      try {
+        if (!audioContext) {
+          const AudioContextClass =
+            window.AudioContext ||
+            window.webkitAudioContext;
+
+          if (!AudioContextClass) {
+            return false;
+          }
+
+          audioContext =
+            new AudioContextClass();
+        }
+
+        if (
+          audioContext.state ===
+            'suspended'
+        ) {
+          await audioContext.resume();
+        }
+
+        // Play a short audible confirmation while this direct tap
+        // still qualifies as a user gesture on mobile browsers.
+        const osc =
+          audioContext.createOscillator();
+
+        const gain =
+          audioContext.createGain();
+
+        osc.type =
+          'sine';
+
+        osc.frequency.setValueAtTime(
+          880,
+          audioContext.currentTime
+        );
+
+        gain.gain.setValueAtTime(
+          0.0001,
+          audioContext.currentTime
+        );
+
+        gain.gain.linearRampToValueAtTime(
+          0.07,
+          audioContext.currentTime + 0.01
+        );
+
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          audioContext.currentTime + 0.09
+        );
+
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+
+        osc.start();
+        osc.stop(
+          audioContext.currentTime + 0.10
+        );
+
+        mobileSoundUnlocked =
+          true;
+
+        return true;
+      }
+      catch (error) {
+        return false;
+      }
+    }
+
+
+    async function startCameraWithSound() {
+      if (!soundStartButton) {
+        return;
+      }
+
+      soundStartButton.disabled =
+        true;
+
+      soundStartButton.textContent =
+        'ENABLING SOUND...';
+
+      const unlocked =
+        await unlockMobileAudioFromGesture();
+
+      soundStartButton.textContent =
+        unlocked
+          ? 'STARTING CAMERA...'
+          : 'STARTING CAMERA...';
+
+      await startScanner();
+
+      soundStartButton.classList.remove(
+        'show'
+      );
+
+      soundStartButton.disabled =
+        false;
+
+      soundStartButton.textContent =
+        'START CAMERA & ENABLE SOUND';
+    }
+
 
     function ensureAudioContext() {
       try {
@@ -512,7 +667,20 @@
         ) {
           audioContext
             .resume()
+            .then(
+              function() {
+                mobileSoundUnlocked =
+                  true;
+              }
+            )
             .catch(function(){});
+        }
+        else if (
+          audioContext.state ===
+            'running'
+        ) {
+          mobileSoundUnlocked =
+            true;
         }
 
         return audioContext;
@@ -1294,7 +1462,34 @@
     );
 
 
-    window.addEventListener('load', startScanner);
+    window.addEventListener(
+      'load',
+      function() {
+
+        if (
+          isMobileOrTouchDevice()
+        ) {
+
+          setStatus(
+            'Tap START CAMERA & ENABLE SOUND once. Keep this page open for continuous scanning.',
+            ''
+          );
+
+          if (
+            soundStartButton
+          ) {
+            soundStartButton.classList.add(
+              'show'
+            );
+          }
+
+          return;
+        }
+
+        startScanner();
+
+      }
+    );
   </script>
 </body>
 </html>
