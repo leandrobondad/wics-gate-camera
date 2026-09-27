@@ -689,6 +689,10 @@
     let pendingCameraException = null;
     let cameraExceptionClassification = '';
 
+    // Keep prefetched student photos so the saved-result card can show
+    // the image immediately even if the photo arrived before the save.
+    const studentPhotoCache = {};
+
     function setStatus(text, type) {
       statusBox.textContent = text;
       statusBox.className = type || '';
@@ -698,6 +702,11 @@
       if (!studentScanCard) {
         return;
       }
+
+      const studentId =
+        String(data.studentId || '')
+          .trim()
+          .toUpperCase();
 
       studentScanName.textContent =
         data.studentName ||
@@ -717,18 +726,51 @@
         .filter(Boolean)
         .join(' • ');
 
-      if (studentScanPhoto) {
-        studentScanPhoto.removeAttribute('src');
-        studentScanPhoto.classList.remove('show');
+      const cachedPhoto =
+        studentId
+          ? studentPhotoCache[studentId]
+          : null;
+
+      if (
+        cachedPhoto &&
+        cachedPhoto.success &&
+        cachedPhoto.photoDataUrl &&
+        studentScanPhoto
+      ) {
+        studentScanPhoto.src =
+          cachedPhoto.photoDataUrl;
+
+        studentScanPhoto.classList.add(
+          'show'
+        );
+
+        if (studentPhotoPlaceholder) {
+          studentPhotoPlaceholder.classList.add(
+            'hidden'
+          );
+        }
+      }
+      else {
+        if (studentScanPhoto) {
+          studentScanPhoto.removeAttribute('src');
+          studentScanPhoto.classList.remove('show');
+        }
+
+        if (studentPhotoPlaceholder) {
+          studentPhotoPlaceholder.textContent =
+            cachedPhoto
+              ? 'NO PHOTO AVAILABLE'
+              : 'PHOTO LOADING';
+
+          studentPhotoPlaceholder.classList.remove(
+            'hidden'
+          );
+        }
       }
 
-      if (studentPhotoPlaceholder) {
-        studentPhotoPlaceholder.textContent =
-          'PHOTO LOADING';
-        studentPhotoPlaceholder.classList.remove('hidden');
-      }
-
-      studentScanCard.classList.add('show');
+      studentScanCard.classList.add(
+        'show'
+      );
     }
 
 
@@ -737,16 +779,56 @@
         return;
       }
 
+      const studentId =
+        String(data && data.studentId || '')
+          .trim()
+          .toUpperCase();
+
       if (
-        !data ||
-        String(data.studentId || '').trim().toUpperCase() !==
-          String(lastAcceptedCode || '').trim().toUpperCase()
+        !studentId ||
+        studentId !==
+          String(lastAcceptedCode || '')
+            .trim()
+            .toUpperCase()
       ) {
         return;
       }
 
-      // If photo retrieval finishes after the first saved-result card
-      // timer, show the card again so the student photo is still visible.
+      studentPhotoCache[studentId] = {
+        success:
+          !!(
+            data.success &&
+            data.photoDataUrl
+          ),
+        photoDataUrl:
+          data.photoDataUrl || '',
+        studentName:
+          data.studentName || '',
+        className:
+          data.className || ''
+      };
+
+      // Photo can arrive while attendance is still saving.
+      // Show it immediately for identity checking.
+      if (data.studentName) {
+        studentScanName.textContent =
+          data.studentName;
+      }
+      else if (!studentScanName.textContent) {
+        studentScanName.textContent =
+          studentId;
+      }
+
+      if (data.className) {
+        studentScanClass.textContent =
+          data.className;
+      }
+
+      if (!studentScanMovement.textContent) {
+        studentScanMovement.textContent =
+          'QR RECOGNIZED • CHECKING ATTENDANCE';
+      }
+
       studentScanCard.classList.add(
         'show'
       );
@@ -772,6 +854,7 @@
       else if (studentPhotoPlaceholder) {
         studentPhotoPlaceholder.textContent =
           'NO PHOTO AVAILABLE';
+
         studentPhotoPlaceholder.classList.remove(
           'hidden'
         );
@@ -2076,18 +2159,9 @@
             650
           );
 
-          setTimeout(
-            function() {
-              if (
-                String(lastAcceptedCode || '').trim().toUpperCase() ===
-                  completedStudentId
-              ) {
-                hideStudentScanCard();
-              }
-            },
-            2200
-          );
-
+          // Keep the photo/result on the CAMERA until the next QR.
+          // The next successful QR recognition already hides the
+          // previous student's card before processing the new scan.
           return;
         }
 
